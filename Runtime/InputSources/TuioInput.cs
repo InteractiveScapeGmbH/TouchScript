@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Net;
 using TouchScript.Pointers;
 using TouchScript.Utils;
 using TuioNet.Common;
@@ -20,10 +21,49 @@ namespace TouchScript.InputSources
         private readonly ObjectPool<TouchPointer> _touchPool;
         private readonly ObjectPool<ObjectPointer> _objectPool;
 
+
+        public TuioConnectionType ConnectionType
+        {
+            get => _connectionType;
+            set
+            {
+                _connectionType = value;
+            }
+        }
+
+        public int Port
+        {
+            get => _port;
+            set
+            {
+                if(value < 0) return;
+                _port = value;
+            }
+        }
+
+        public string IpAddress
+        {
+            get => _ipAddress;
+            set
+            {
+                if(IPAddress.TryParse(value, out _))
+                {
+                    _ipAddress = value;
+                }
+            }
+        }
+
         protected TuioInput()
         {
             _touchPool = new ObjectPool<TouchPointer>(50, () => new TouchPointer(this), null, ResetPointer);
             _objectPool = new ObjectPool<ObjectPointer>(50, () => new ObjectPointer(this), null, ResetPointer);
+        }
+
+        public void Reinit()
+        {
+            Disconnect();
+            IsInitialized = false;
+            Init();
         }
 
         protected abstract void Connect();
