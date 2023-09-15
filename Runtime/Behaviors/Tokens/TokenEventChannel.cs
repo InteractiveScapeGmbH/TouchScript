@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace TouchScript.Behaviors.Tokens
 {
+    [CreateAssetMenu(fileName = "Token Event Channel", menuName = "TouchScript/Event Channel/New Token Event Channel", order = 0)]
     public class TokenEventChannel : ScriptableObject
     {
         public event Action<Pointer> OnTokenAdded;
