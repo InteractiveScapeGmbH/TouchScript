@@ -2,7 +2,6 @@
 using TouchScript.Pointers;
 using UnityEngine;
 using UnityEngine.Profiling;
-using UnityEngine.Serialization;
 
 namespace TouchScript.Behaviors.Tokens
 {
