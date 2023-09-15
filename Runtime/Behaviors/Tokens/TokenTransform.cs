@@ -10,24 +10,28 @@ namespace TouchScript.Behaviors.Tokens
         [SerializeField] private TokenEventChannel _tokenEventChannel;
         public int Id { get; private set; }
 
+        public void Init(int id)
+        {
+            Id = id;
+            gameObject.name = $"Token {Id}";
+        }
+        
         private void OnEnable()
         {
-            _tokenEventChannel.OnTokenUpdated += UpdatePointer;
+            _tokenEventChannel.OnTokenUpdated += UpdateToken;
         }
 
         private void OnDisable()
         {
-            _tokenEventChannel.OnTokenUpdated -= UpdatePointer;
+            _tokenEventChannel.OnTokenUpdated -= UpdateToken;
         }
 
-        protected override void UpdateOnce(IPointer pointer)
+        private void UpdateToken(ObjectPointer pointer)
         {
-            base.UpdateOnce(pointer);
-            if (pointer is not ObjectPointer objectPointer) return;
-            Id = objectPointer.ObjectId;
-            gameObject.name = $"Token {Id}";
+            if (pointer.ObjectId != Id) return;
+            UpdatePointer(pointer);
         }
-
+        
         protected override void UpdatePointerInternal(IPointer pointer)
         {
             base.UpdatePointerInternal(pointer);
