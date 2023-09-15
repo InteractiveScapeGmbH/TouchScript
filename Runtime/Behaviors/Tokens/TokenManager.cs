@@ -2,11 +2,14 @@
 using TouchScript.Pointers;
 using UnityEngine;
 using UnityEngine.Profiling;
+using UnityEngine.Serialization;
 
 namespace TouchScript.Behaviors.Tokens
 {
     public class TokenManager : MonoBehaviour
     {
+        [SerializeField] private TokenEventChannel _tokenEventChannel;
+        
         private CustomSampler _tokenSampler;
 
         public event Action<Pointer> OnTokenAdded;
@@ -44,7 +47,7 @@ namespace TouchScript.Behaviors.Tokens
                 var pointer = e.Pointers[i];
                 if((pointer.Flags & Pointer.FLAG_INTERNAL) > 0) continue;
                 if(pointer.Type != Pointer.PointerType.Object) continue;
-                OnTokenAdded?.Invoke(pointer);
+                _tokenEventChannel.RaiseAdded(pointer);
             }
             _tokenSampler.End();
         }
@@ -56,7 +59,7 @@ namespace TouchScript.Behaviors.Tokens
             for (var i = 0; i < count; i++)
             {
                 var pointer = e.Pointers[i];
-                OnTokenUpdated?.Invoke(pointer);
+                _tokenEventChannel.RaiseUpdated(pointer);
             }
             _tokenSampler.End();
         }
@@ -68,7 +71,7 @@ namespace TouchScript.Behaviors.Tokens
             for (var i = 0; i < count; i++)
             {
                 var pointer = e.Pointers[i];
-                OnTokenRemoved?.Invoke(pointer);
+                _tokenEventChannel.RaiseRemoved(pointer);
             }
             _tokenSampler.End();
         }
