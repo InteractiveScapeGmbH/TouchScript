@@ -1,30 +1,21 @@
-﻿using System.Collections.Generic;
-using TouchScript.Behaviors.Cursors;
+﻿using System;
 using TouchScript.Pointers;
-using TouchScript.Utils;
 using UnityEngine;
 using UnityEngine.Profiling;
-using UnityEngine.Serialization;
 
 namespace TouchScript.Behaviors.Tokens
 {
     public class TokenManager : MonoBehaviour
     {
-        [FormerlySerializedAs("_objectPrefab")] [SerializeField] private TokenTransform _tokenPrefab;
-
-        private const int MaxObjectCount = 24;
-        private ObjectPool<TokenTransform> _tokenPool;
-        private readonly Dictionary<int, TokenTransform> _tokens = new();
         private CustomSampler _tokenSampler;
-        private RectTransform _rectTransform;
+
+        public event Action<Pointer> OnTokenAdded;
+        public event Action<Pointer> OnTokenUpdated;
+        public event Action<Pointer> OnTokenRemoved; 
 
         private void Awake()
         {
-            _tokenSampler = CustomSampler.Create("[TouchScript] Token Transform");
-            _tokenSampler.Begin();
-            _tokenPool = new ObjectPool<TokenTransform>(MaxObjectCount, SpawnTokenTransform, null, HideTokenTransform);
-            _rectTransform = GetComponent<RectTransform>();
-            _tokenSampler.End();
+            _tokenSampler = CustomSampler.Create("[TouchScript] Token Manager");
         }
 
         private void OnEnable()
@@ -53,9 +44,7 @@ namespace TouchScript.Behaviors.Tokens
                 var pointer = e.Pointers[i];
                 if((pointer.Flags & Pointer.FLAG_INTERNAL) > 0) continue;
                 if(pointer.Type != Pointer.PointerType.Object) continue;
-                var tokenTransform = _tokenPool.Get();
-                tokenTransform.Init(_rectTransform, pointer);
-                _tokens.Add(pointer.Id, tokenTransform);
+                OnTokenAdded?.Invoke(pointer);
             }
             _tokenSampler.End();
         }
@@ -67,8 +56,7 @@ namespace TouchScript.Behaviors.Tokens
             for (var i = 0; i < count; i++)
             {
                 var pointer = e.Pointers[i];
-                if (!_tokens.TryGetValue(pointer.Id, out var token)) continue;
-                token.UpdatePointer(pointer);
+                OnTokenUpdated?.Invoke(pointer);
             }
             _tokenSampler.End();
         }
@@ -80,21 +68,9 @@ namespace TouchScript.Behaviors.Tokens
             for (var i = 0; i < count; i++)
             {
                 var pointer = e.Pointers[i];
-                if(!_tokens.TryGetValue(pointer.Id, out var token)) continue;
-                _tokens.Remove(pointer.Id);
-                _tokenPool.Release(token);
+                OnTokenRemoved?.Invoke(pointer);
             }
             _tokenSampler.End();
-        }
-        
-        private void HideTokenTransform(PointerCursor pointer)
-        {
-            pointer.Hide();
-        }
-
-        private TokenTransform SpawnTokenTransform()
-        {
-            return Instantiate(_tokenPrefab);
         }
     }
 }
