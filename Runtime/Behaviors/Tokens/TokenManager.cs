@@ -11,10 +11,6 @@ namespace TouchScript.Behaviors.Tokens
         
         private CustomSampler _tokenSampler;
 
-        public event Action<Pointer> OnTokenAdded;
-        public event Action<Pointer> OnTokenUpdated;
-        public event Action<Pointer> OnTokenRemoved; 
-
         private void Awake()
         {
             _tokenSampler = CustomSampler.Create("[TouchScript] Token Manager");
@@ -45,8 +41,8 @@ namespace TouchScript.Behaviors.Tokens
             {
                 var pointer = e.Pointers[i];
                 if((pointer.Flags & Pointer.FLAG_INTERNAL) > 0) continue;
-                if(pointer.Type != Pointer.PointerType.Object) continue;
-                _tokenEventChannel.RaiseAdded(pointer);
+                if(pointer is not ObjectPointer tokenPointer) continue;
+                _tokenEventChannel.RaiseAdded(tokenPointer);
             }
             _tokenSampler.End();
         }
@@ -58,7 +54,8 @@ namespace TouchScript.Behaviors.Tokens
             for (var i = 0; i < count; i++)
             {
                 var pointer = e.Pointers[i];
-                _tokenEventChannel.RaiseUpdated(pointer);
+                if(pointer is not ObjectPointer tokenPointer) continue;
+                _tokenEventChannel.RaiseUpdated(tokenPointer);
             }
             _tokenSampler.End();
         }
@@ -70,7 +67,8 @@ namespace TouchScript.Behaviors.Tokens
             for (var i = 0; i < count; i++)
             {
                 var pointer = e.Pointers[i];
-                _tokenEventChannel.RaiseRemoved(pointer);
+                if(pointer is not ObjectPointer tokenPointer) continue;
+                _tokenEventChannel.RaiseRemoved(tokenPointer);
             }
             _tokenSampler.End();
         }
