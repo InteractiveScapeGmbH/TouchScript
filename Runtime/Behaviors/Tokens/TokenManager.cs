@@ -7,13 +7,32 @@ namespace TouchScript.Behaviors.Tokens
 {
     public class TokenManager : MonoBehaviour
     {
+        [SerializeField] private TokenTransform _prefab;
         [SerializeField] private TokenEventChannel _tokenEventChannel;
-        
+        [field:SerializeField] public int[] AllowedIds { get; set; }
+
+        private readonly Dictionary<int, TokenTransform> _tokens = new ();
         private CustomSampler _tokenSampler;
 
         private void Awake()
         {
             _tokenSampler = CustomSampler.Create("[TouchScript] Token Manager");
+        }
+
+        private void Start()
+        {
+            SpawnTokens();
+        }
+
+        private void SpawnTokens()
+        {
+            foreach (var id in AllowedIds)
+            {
+                var token = Instantiate(_prefab, transform);
+                token.Init(id);
+                _tokens[id] = token;
+                token.gameObject.SetActive(false);
+            }
         }
 
         private void OnEnable()
