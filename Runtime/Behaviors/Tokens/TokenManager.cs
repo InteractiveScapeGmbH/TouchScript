@@ -99,8 +99,17 @@ namespace TouchScript.Behaviors.Tokens
                 var pointer = e.Pointers[i];
                 if(pointer is not ObjectPointer tokenPointer) continue;
                 _tokenEventChannel.RaiseRemoved(tokenPointer);
+                HideToken(tokenPointer);
             }
             _tokenSampler.End();
+        }
+        
+        private void HideToken(ObjectPointer pointer)
+        {
+            if (_tokens.TryGetValue(pointer.ObjectId, out var token))
+            {
+                token.gameObject.SetActive(false);
+            }
         }
     }
 }
