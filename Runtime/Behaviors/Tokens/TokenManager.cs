@@ -43,6 +43,7 @@ namespace TouchScript.Behaviors.Tokens
                 if((pointer.Flags & Pointer.FLAG_INTERNAL) > 0) continue;
                 if(pointer is not ObjectPointer tokenPointer) continue;
                 _tokenEventChannel.RaiseAdded(tokenPointer);
+                _tokenEventChannel.RaiseUpdated(tokenPointer);
             }
             _tokenSampler.End();
         }
