@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using TouchScript.Pointers;
 using UnityEngine;
 using UnityEngine.Profiling;
