@@ -62,9 +62,19 @@ namespace TouchScript.Behaviors.Tokens
                 if((pointer.Flags & Pointer.FLAG_INTERNAL) > 0) continue;
                 if(pointer is not ObjectPointer tokenPointer) continue;
                 _tokenEventChannel.RaiseAdded(tokenPointer);
-                _tokenEventChannel.RaiseUpdated(tokenPointer);
+                ShowToken(tokenPointer);
+                
             }
             _tokenSampler.End();
+        }
+
+        private void ShowToken(ObjectPointer pointer)
+        {
+            if (_tokens.TryGetValue(pointer.ObjectId, out var token))
+            {
+                token.gameObject.SetActive(true);
+                token.UpdatePointer(pointer);
+            }
         }
 
         private void OnPointerUpdated(object sender, PointerEventArgs e)
