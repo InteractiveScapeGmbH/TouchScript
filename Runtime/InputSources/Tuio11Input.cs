@@ -4,6 +4,7 @@
 
 #if UNITY_EDITOR || UNITY_STANDALONE || UNITY_IOS || UNITY_ANDROID
 using TouchScript.Pointers;
+using TuioNet.Common;
 using TuioNet.Tuio11;
 using UnityEngine;
 
@@ -13,14 +14,16 @@ namespace TouchScript.InputSources
     /// Processes TUIO 1.1 input.
     /// </summary>
     [AddComponentMenu("TouchScript/Input Sources/TUIO 1.1 Input")]
-    public sealed class Tuio11Input : TuioInput, ITuio11CursorListener, ITuio11ObjectListener
+    public sealed class Tuio11Input : TuioInput
     {
-        private Tuio11Client _client;
+        private TuioClient _client;
+        private Tuio11Processor _processor;
 
         protected override void Init()
         {
             if (IsInitialized) return;
-            _client = new Tuio11Client(_connectionType, _ipAddress, _port, false);
+            _client = new TuioClient(_connectionType, _ipAddress, _port, false);
+            _processor = new Tuio11Processor(_client);
             Connect();
             IsInitialized = true;
         }
@@ -28,13 +31,24 @@ namespace TouchScript.InputSources
         protected override void Connect()
         {
             _client?.Connect();
-            _client?.AddCursorListener(this);
-            _client?.AddObjectListener(this);
+            _processor.OnCursorAdded += AddCursor;
+            _processor.OnCursorUpdated += UpdateCursor;
+            _processor.OnCursorRemoved += RemoveCursor;
+
+            _processor.OnObjectAdded += AddObject;
+            _processor.OnObjectUpdated += UpdateObject;
+            _processor.OnObjectRemoved += RemoveObject;
         }
 
         protected override void Disconnect()
         {
-            _client?.RemoveAllTuioListeners();
+            _processor.OnCursorAdded -= AddCursor;
+            _processor.OnCursorUpdated -= UpdateCursor;
+            _processor.OnCursorRemoved -= RemoveCursor;
+
+            _processor.OnObjectAdded -= AddObject;
+            _processor.OnObjectUpdated -= UpdateObject;
+            _processor.OnObjectRemoved -= RemoveObject;
             _client?.Disconnect();
         }
 
@@ -44,7 +58,7 @@ namespace TouchScript.InputSources
             return true;
         }
 
-        public void AddObject(Tuio11Object tuio11Object)
+        private void AddObject(Tuio11Object tuio11Object)
         {
             lock (this)
             {
@@ -59,7 +73,7 @@ namespace TouchScript.InputSources
             }
         }
 
-        public void UpdateObject(Tuio11Object tuio11Object)
+        private void UpdateObject(Tuio11Object tuio11Object)
         {
             lock (this)
             {
@@ -75,7 +89,7 @@ namespace TouchScript.InputSources
             }
         }
 
-        public void RemoveObject(Tuio11Object tuio11Object)
+        private void RemoveObject(Tuio11Object tuio11Object)
         {
             lock (this)
             {
@@ -86,7 +100,7 @@ namespace TouchScript.InputSources
             }
         }
 
-        public void AddCursor(Tuio11Cursor tuio11Cursor)
+        private void AddCursor(Tuio11Cursor tuio11Cursor)
         {
             lock(this)
             {
@@ -99,7 +113,7 @@ namespace TouchScript.InputSources
             }
         }
 
-        public void UpdateCursor(Tuio11Cursor tuio11Cursor)
+        private void UpdateCursor(Tuio11Cursor tuio11Cursor)
         {
             lock (this)
             {
@@ -114,7 +128,7 @@ namespace TouchScript.InputSources
             }
         }
 
-        public void RemoveCursor(Tuio11Cursor tuio11Cursor)
+        private void RemoveCursor(Tuio11Cursor tuio11Cursor)
         {
             lock (this)
             {

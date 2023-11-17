@@ -10,13 +10,15 @@ namespace TouchScript.InputSources
     /// </summary>
     
     [AddComponentMenu("TouchScript/Input Sources/TUIO 2.0 Input")]
-    public sealed class Tuio20Input : TuioInput, ITuio20Listener
+    public sealed class Tuio20Input : TuioInput
     {
-        private Tuio20Client _client;
+        private TuioClient _client;
+        private Tuio20Processor _processor;
         protected override void Init()
         {
             if (IsInitialized) return;
-            _client = new Tuio20Client(_connectionType, _ipAddress, _port, false);
+            _client = new TuioClient(_connectionType, _ipAddress, _port, false);
+            _processor = new Tuio20Processor(_client);
             Connect();
             IsInitialized = true;
         }
@@ -24,12 +26,17 @@ namespace TouchScript.InputSources
         protected override void Connect()
         {
             _client?.Connect();
-            _client?.AddTuioListener(this);
+
+            _processor.OnObjectAdded += TuioAdd;
+            _processor.OnObjectUpdated += TuioUpdate;
+            _processor.OnObjectRemoved += TuioRemove;
         }
 
         protected override void Disconnect()
         {
-            _client.RemoveAllTuioListeners();
+            _processor.OnObjectAdded -= TuioAdd;
+            _processor.OnObjectUpdated -= TuioUpdate;
+            _processor.OnObjectRemoved -= TuioRemove;
             _client?.Disconnect();
         }
         
@@ -39,7 +46,7 @@ namespace TouchScript.InputSources
             return true;
         }
 
-        public void TuioAdd(Tuio20Object tuio20Object)
+        private void TuioAdd(Tuio20Object tuio20Object)
         {
             lock (this)
             {
@@ -70,7 +77,7 @@ namespace TouchScript.InputSources
             }
         }
 
-        public void TuioUpdate(Tuio20Object tuio20Object)
+        private void TuioUpdate(Tuio20Object tuio20Object)
         {
             lock (this)
             {
@@ -103,7 +110,7 @@ namespace TouchScript.InputSources
             }
         }
 
-        public void TuioRemove(Tuio20Object tuio20Object)
+        private void TuioRemove(Tuio20Object tuio20Object)
         {
             lock (this)
             {
