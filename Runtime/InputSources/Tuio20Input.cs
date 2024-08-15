@@ -1,145 +1,89 @@
-﻿using TouchScript.Pointers;
-using TuioNet.Common;
-using TuioNet.Tuio20;
+﻿using TuioNet.Tuio20;
 using UnityEngine;
 
 namespace TouchScript.InputSources
 {
-    /// <summary>
-    /// Processes TUIO 2.0 input
-    /// </summary>
-    
-    [AddComponentMenu("TouchScript/Input Sources/TUIO 2.0 Input")]
-    public sealed class Tuio20Input : TuioInput
+    public class Tuio20Input : ITuioInput
     {
-        private TuioClient _client;
-        private Tuio20Processor _processor;
-        protected override void Init()
-        {
-            if (IsInitialized) return;
-            _client = new TuioClient(_connectionType, _ipAddress, _port, false);
-            _processor = new Tuio20Processor(_client);
-            Connect();
-            IsInitialized = true;
-        }
+        private readonly Tuio20Dispatcher _dispatcher;
+        private readonly TuioInput _input;
         
-        protected override void Connect()
+        public Tuio20Input(TuioInput input)
         {
-            _client?.Connect();
-
-            _processor.OnObjectAdded += TuioAdd;
-            _processor.OnObjectUpdated += TuioUpdate;
-            _processor.OnObjectRemoved += TuioRemove;
+            _input = input;
+            _dispatcher = (Tuio20Dispatcher)input.TuioDispatcher;
+        }
+        public void AddCallbacks()
+        {
+            _dispatcher.OnObjectAdd += TuioAdd;
+            _dispatcher.OnObjectUpdate += TuioUpdate;
+            _dispatcher.OnObjectRemove += TuioRemove;
         }
 
-        protected override void Disconnect()
+        public void RemoveCallbacks()
         {
-            _processor.OnObjectAdded -= TuioAdd;
-            _processor.OnObjectUpdated -= TuioUpdate;
-            _processor.OnObjectRemoved -= TuioRemove;
-            _client?.Disconnect();
+            _dispatcher.OnObjectAdd -= TuioAdd;
+            _dispatcher.OnObjectUpdate -= TuioUpdate;
+            _dispatcher.OnObjectRemove -= TuioRemove;
         }
-        
-        public override bool UpdateInput()
-        {
-            _client.ProcessMessages();
-            return true;
-        }
-
-        private void TuioAdd(Tuio20Object tuio20Object)
+        private void TuioAdd(object sender, Tuio20Object tuio20Object)
         {
             lock (this)
             {
+                Vector2 normalizedPosition;
                 if (tuio20Object.ContainsNewTuioPointer())
                 {
                     var tuioPointer = tuio20Object.Pointer;
-                    var screenPosition = new Vector2
-                    {
-                        x = tuioPointer.Position.X * ScreenWidth,
-                        y = (1f - tuioPointer.Position.Y) * ScreenHeight
-                    };
-                   TouchToInternalId.Add(tuioPointer.SessionId, AddTouch(screenPosition));
+                    normalizedPosition = new Vector2(tuioPointer.Position.X, tuioPointer.Position.Y);
+                    _input.AddTouch(tuioPointer.SessionId, normalizedPosition);
                 }
-
+        
                 if (tuio20Object.ContainsNewTuioToken())
                 {
                     var token = tuio20Object.Token;
-                    var screenPosition = new Vector2
-                    {
-                        x = token.Position.X * ScreenWidth,
-                        y = (1f - token.Position.Y) * ScreenHeight
-                    };
-                    var objectPointer = AddObject(screenPosition);
-                    UpdateObjectProperties(objectPointer,token);
-                    ObjectToInternalId.Add(token.SessionId, objectPointer);
-                }
-                
-            }
-        }
-
-        private void TuioUpdate(Tuio20Object tuio20Object)
-        {
-            lock (this)
-            {
-                if (tuio20Object.ContainsTuioPointer())
-                {
-                    var tuioPointer = tuio20Object.Pointer;
-                    if(!TouchToInternalId.TryGetValue(tuioPointer.SessionId, out var touchPointer)) return;
-                    var screenPosition = new Vector2
-                    {
-                        x = tuioPointer.Position.X * ScreenWidth,
-                        y = (1f - tuioPointer.Position.Y) * ScreenHeight
-                    };
-                    touchPointer.Position = RemapCoordinates(screenPosition);
-                    UpdatePointer(touchPointer);
-                }
-
-                if (tuio20Object.ContainsTuioToken())
-                {
-                    var token = tuio20Object.Token;
-                    if (!ObjectToInternalId.TryGetValue(token.SessionId, out var objectPointer)) return;
-                    var screenPosition = new Vector2
-                    {
-                        x = token.Position.X * ScreenWidth,
-                        y = (1f - token.Position.Y) * ScreenHeight
-                    };
-                    objectPointer.Position = RemapCoordinates(screenPosition);
-                    UpdateObjectProperties(objectPointer, token);
-                    UpdatePointer(objectPointer);
+                    normalizedPosition = new Vector2(token.Position.X, token.Position.Y);
+                    _input.AddObject(token.SessionId, (int)token.ComponentId, normalizedPosition, token.Angle);
                 }
             }
         }
-
-        private void TuioRemove(Tuio20Object tuio20Object)
-        {
-            lock (this)
-            {
-                if (tuio20Object.ContainsTuioPointer())
-                {
-                    var tuioPointer = tuio20Object.Pointer;
-                    if (!TouchToInternalId.TryGetValue(tuioPointer.SessionId, out var touchPointer)) return;
-                    TouchToInternalId.Remove(tuioPointer.SessionId);
-                    ReleasePointer(touchPointer);
-                    RemovePointer(touchPointer);
-                }
-
-                if (tuio20Object.ContainsTuioToken())
-                {
-                    var token = tuio20Object.Token;
-                    if (!ObjectToInternalId.TryGetValue(token.SessionId, out var objectPointer)) return;
-                    ObjectToInternalId.Remove(token.SessionId);
-                    ReleasePointer(objectPointer);
-                    RemovePointer(objectPointer);
-                }
-            }
-        }
-
-        public void TuioRefresh(TuioTime tuioTime) { }
         
-        private void UpdateObjectProperties(ObjectPointer pointer, Tuio20Token token)
+        private void TuioUpdate(object sender, Tuio20Object tuio20Object)
         {
-            pointer.ObjectId = (int)token.ComponentId;
-            pointer.Angle = token.Angle;
+            lock (this)
+            {
+                Vector2 normalizedPosition;
+                if (tuio20Object.ContainsTuioPointer())
+                {
+                    var tuioPointer = tuio20Object.Pointer;
+                    normalizedPosition = new Vector2(tuioPointer.Position.X, tuioPointer.Position.Y);
+                    _input.UpdateTouch(tuioPointer.SessionId, normalizedPosition);
+                }
+        
+                if (tuio20Object.ContainsTuioToken())
+                {
+                    var token = tuio20Object.Token;
+                    normalizedPosition = new Vector2(token.Position.X, token.Position.Y);
+                    _input.UpdateObject(token.SessionId, normalizedPosition, token.Angle);
+                }
+            }
+        }
+        
+        private void TuioRemove(object sender, Tuio20Object tuio20Object)
+        {
+            lock (this)
+            {
+                if (tuio20Object.ContainsTuioPointer())
+                {
+                    var tuioPointer = tuio20Object.Pointer;
+                    _input.RemoveTouch(tuioPointer.SessionId);
+                }
+        
+                if (tuio20Object.ContainsTuioToken())
+                {
+                    var token = tuio20Object.Token;
+                    _input.RemoveObject(token.SessionId);
+                }
+            }
         }
     }
 }

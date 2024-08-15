@@ -1,150 +1,90 @@
-/*
- * @author Valentin Simonov / http://va.lent.in/
- */
-
-#if UNITY_EDITOR || UNITY_STANDALONE || UNITY_IOS || UNITY_ANDROID
-using TouchScript.Pointers;
-using TuioNet.Common;
 using TuioNet.Tuio11;
 using UnityEngine;
 
 namespace TouchScript.InputSources
 {
-    /// <summary>
-    /// Processes TUIO 1.1 input.
-    /// </summary>
-    [AddComponentMenu("TouchScript/Input Sources/TUIO 1.1 Input")]
-    public sealed class Tuio11Input : TuioInput
+    public class Tuio11Input : ITuioInput
     {
-        private TuioClient _client;
-        private Tuio11Processor _processor;
-
-        protected override void Init()
+        private readonly Tuio11Dispatcher _dispatcher;
+        private readonly TuioInput _input;
+        public Tuio11Input(TuioInput input)
         {
-            if (IsInitialized) return;
-            _client = new TuioClient(_connectionType, _ipAddress, _port, false);
-            _processor = new Tuio11Processor(_client);
-            Connect();
-            IsInitialized = true;
+            _input = input;
+            _dispatcher = (Tuio11Dispatcher)input.TuioDispatcher;
+        }
+        
+        public void AddCallbacks()
+        {
+            _dispatcher.OnCursorAdd += AddCursor;
+            _dispatcher.OnCursorUpdate += UpdateCursor;
+            _dispatcher.OnCursorRemove += RemoveCursor;
+            
+            _dispatcher.OnObjectAdd += AddObject;
+            _dispatcher.OnObjectUpdate += UpdateObject;
+            _dispatcher.OnObjectRemove += RemoveObject;
         }
 
-        protected override void Connect()
+        public void RemoveCallbacks()
         {
-            _client?.Connect();
-            _processor.OnCursorAdded += AddCursor;
-            _processor.OnCursorUpdated += UpdateCursor;
-            _processor.OnCursorRemoved += RemoveCursor;
-
-            _processor.OnObjectAdded += AddObject;
-            _processor.OnObjectUpdated += UpdateObject;
-            _processor.OnObjectRemoved += RemoveObject;
+            _dispatcher.OnCursorAdd -= AddCursor;
+            _dispatcher.OnCursorUpdate -= UpdateCursor;
+            _dispatcher.OnCursorRemove -= RemoveCursor;
+            
+            _dispatcher.OnObjectAdd -= AddObject;
+            _dispatcher.OnObjectUpdate -= UpdateObject;
+            _dispatcher.OnObjectRemove -= RemoveObject;
         }
-
-        protected override void Disconnect()
-        {
-            _processor.OnCursorAdded -= AddCursor;
-            _processor.OnCursorUpdated -= UpdateCursor;
-            _processor.OnCursorRemoved -= RemoveCursor;
-
-            _processor.OnObjectAdded -= AddObject;
-            _processor.OnObjectUpdated -= UpdateObject;
-            _processor.OnObjectRemoved -= RemoveObject;
-            _client?.Disconnect();
-        }
-
-        public override bool UpdateInput()
-        {
-            _client.ProcessMessages();
-            return true;
-        }
-
-        private void AddObject(Tuio11Object tuio11Object)
+        
+        private void AddObject(object sender, Tuio11Object tuio11Object)
         {
             lock (this)
             {
-                var screenPosition = new Vector2
-                {
-                    x = tuio11Object.Position.X * ScreenWidth,
-                    y = (1f - tuio11Object.Position.Y) * ScreenHeight
-                };
-                var objectPointer = AddObject(screenPosition);
-                UpdateObjectProperties(objectPointer, tuio11Object);
-                ObjectToInternalId.Add(tuio11Object.SymbolId, objectPointer);
+                var normalizedPosition = new Vector2(tuio11Object.Position.X, tuio11Object.Position.Y);
+                _input.AddObject(tuio11Object.SessionId, (int)tuio11Object.SymbolId, normalizedPosition, tuio11Object.Angle);
             }
         }
-
-        private void UpdateObject(Tuio11Object tuio11Object)
+        
+        private void UpdateObject(object sender, Tuio11Object tuio11Object)
         {
             lock (this)
             {
-                if (!ObjectToInternalId.TryGetValue(tuio11Object.SymbolId, out var objectPointer)) return;
-                var screenPosition = new Vector2
-                {
-                    x = tuio11Object.Position.X * ScreenWidth,
-                    y = (1f - tuio11Object.Position.Y) * ScreenHeight
-                };
-                objectPointer.Position = RemapCoordinates(screenPosition);
-                UpdateObjectProperties(objectPointer, tuio11Object);
-                UpdatePointer(objectPointer);
+                var normalizedPosition = new Vector2(tuio11Object.Position.X, tuio11Object.Position.Y);
+                _input.UpdateObject(tuio11Object.SessionId, normalizedPosition, tuio11Object.Angle);
             }
         }
-
-        private void RemoveObject(Tuio11Object tuio11Object)
+        
+        private void RemoveObject(object sender, Tuio11Object tuio11Object)
         {
             lock (this)
             {
-                if (!ObjectToInternalId.TryGetValue(tuio11Object.SymbolId, out var objectPointer)) return;
-                ObjectToInternalId.Remove(tuio11Object.SymbolId);
-                ReleasePointer(objectPointer);
-                RemovePointer(objectPointer);
+                _input.RemoveObject(tuio11Object.SessionId);
             }
         }
-
-        private void AddCursor(Tuio11Cursor tuio11Cursor)
+        
+        private void AddCursor(object sender, Tuio11Cursor tuio11Cursor)
         {
             lock(this)
             {
-                var screenPosition = new Vector2
-                {
-                    x = tuio11Cursor.Position.X * ScreenWidth,
-                    y = (1f - tuio11Cursor.Position.Y) * ScreenHeight
-                };
-                TouchToInternalId.Add(tuio11Cursor.CursorId, AddTouch(screenPosition));
+                var normalizedPosition = new Vector2(tuio11Cursor.Position.X, tuio11Cursor.Position.Y);
+                _input.AddTouch(tuio11Cursor.SessionId, normalizedPosition);
             }
         }
-
-        private void UpdateCursor(Tuio11Cursor tuio11Cursor)
+        
+        private void UpdateCursor(object sender, Tuio11Cursor tuio11Cursor)
         {
             lock (this)
             {
-                if (!TouchToInternalId.TryGetValue(tuio11Cursor.CursorId, out var touchPointer)) return;
-                var screenPosition = new Vector2
-                {
-                    x = tuio11Cursor.Position.X * ScreenWidth,
-                    y = (1f - tuio11Cursor.Position.Y) * ScreenHeight
-                };
-                touchPointer.Position = RemapCoordinates(screenPosition);
-                UpdatePointer(touchPointer);
+                var normalizedPosition = new Vector2(tuio11Cursor.Position.X, tuio11Cursor.Position.Y);
+                _input.UpdateTouch(tuio11Cursor.SessionId, normalizedPosition);
             }
         }
-
-        private void RemoveCursor(Tuio11Cursor tuio11Cursor)
+        
+        private void RemoveCursor(object sender, Tuio11Cursor tuio11Cursor)
         {
             lock (this)
             {
-                if (!TouchToInternalId.TryGetValue(tuio11Cursor.CursorId, out var touchPointer)) return;
-                TouchToInternalId.Remove(tuio11Cursor.CursorId);
-                ReleasePointer(touchPointer);
-                RemovePointer(touchPointer);
+                _input.RemoveTouch(tuio11Cursor.SessionId);
             }
-        }
-
-        private void UpdateObjectProperties(ObjectPointer pointer, Tuio11Object tuio11Object)
-        {
-            pointer.ObjectId = (int)tuio11Object.SymbolId;
-            pointer.Angle = tuio11Object.Angle;
         }
     }
 }
-
-#endif
