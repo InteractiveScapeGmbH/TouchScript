@@ -9,7 +9,7 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "TuioNet.dll"
+        "TuioNet-Touchscript.dll"
     ],
     "autoReferenced": true,
     "defineConstraints": [],
