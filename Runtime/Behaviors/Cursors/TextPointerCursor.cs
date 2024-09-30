@@ -10,7 +10,7 @@ namespace TouchScript.Behaviors.Cursors
     /// </summary>
     /// <typeparam name="T">Pointer type.</typeparam>
     /// <seealso cref="TouchScript.Behaviors.Cursors.PointerCursor" />
-    public abstract class TextPointerCursor<T> : PointerCursor where T : IPointer
+    public abstract class TextPointerCursor<T> : PointerCursor<T> where T : IPointer
     {
         #region Public properties
 

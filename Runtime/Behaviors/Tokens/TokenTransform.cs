@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace TouchScript.Behaviors.Tokens
 {
-    public class TokenTransform : PointerCursor
+    public class TokenTransform : PointerCursor<ObjectPointer>
     {
         [SerializeField] private TokenEventChannel _tokenEventChannel;
         public int Id { get; private set; }
