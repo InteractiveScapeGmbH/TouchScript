@@ -210,13 +210,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 8136025}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b827f3c1ccf74b1ebee4472ed86325ae, type: 3}
+  m_Script: {fileID: 11500000, guid: fdfb6104ad1047969f073ecedd435bc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   basicEditor: 1
+  _tuioVersion: 1
   _connectionType: 1
-  _port: 3343
   _ipAddress: 10.0.0.20
+  _udpPort: 3333
 --- !u!1 &270942576
 GameObject:
   m_ObjectHideFlags: 0

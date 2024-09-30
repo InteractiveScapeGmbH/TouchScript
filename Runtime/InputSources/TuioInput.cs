@@ -1,43 +1,43 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using TouchScript.Pointers;
 using TouchScript.Utils;
 using TuioNet.Common;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace TouchScript.InputSources
 {
     [HelpURL("https://github.com/InteractiveScapeGmbH/TouchScript/wiki/TUIOInput")]
-    public abstract class TuioInput : InputSource
+    [AddComponentMenu("TouchScript/Input Sources/TUIO Input")]
+    public class TuioInput : InputSource
     {
-        [SerializeField] protected TuioConnectionType _connectionType;
-        [SerializeField] protected int _port = 3333;
-        [SerializeField] protected string _ipAddress = "127.0.0.1";
-        protected bool IsInitialized = false;
+        [SerializeField] private TuioVersion _tuioVersion = TuioVersion.Tuio11;
+        [SerializeField] private TuioConnectionType _connectionType = TuioConnectionType.UDP;
+        [SerializeField] private string _ipAddress = "127.0.0.1";
+        [SerializeField] private int _udpPort = 3333;
 
-        protected readonly Dictionary<uint, TouchPointer> TouchToInternalId = new();
-        protected readonly Dictionary<uint, ObjectPointer> ObjectToInternalId = new();
+        private TuioSession _session;
+        private bool _isInitialized = false;
 
-        private readonly ObjectPool<TouchPointer> _touchPool;
-        private readonly ObjectPool<ObjectPointer> _objectPool;
+        private readonly Dictionary<uint, TouchPointer> _touchToInternalId = new();
+        private readonly Dictionary<uint, ObjectPointer> _objectToInternalId = new();
 
+        private ObjectPool<TouchPointer> _touchPool;
+        private ObjectPool<ObjectPointer> _objectPool;
 
-        public TuioConnectionType ConnectionType
+        private ITuioInput _tuioInput;
+
+        public Vector2Int Resolution { get; private set; }
+
+        public int UdpPort
         {
-            get => _connectionType;
-            set
-            {
-                _connectionType = value;
-            }
-        }
-
-        public int Port
-        {
-            get => _port;
+            get => _udpPort;
             set
             {
                 if(value < 0) return;
-                _port = value;
+                UdpPort = value;
             }
         }
 
@@ -46,52 +46,109 @@ namespace TouchScript.InputSources
             get => _ipAddress;
             set
             {
-                if(IPAddress.TryParse(value, out _))
+                if (IPAddress.TryParse(value, out _))
                 {
                     _ipAddress = value;
                 }
             }
         }
+        
+        public ITuioDispatcher TuioDispatcher
+        {
+            get
+            {
+                if (_session == null)
+                {
+                    Init();
+                }
 
-        protected TuioInput()
+                return _session.TuioDispatcher;
+            }
+        }
+
+        protected void Awake()
         {
             _touchPool = new ObjectPool<TouchPointer>(50, () => new TouchPointer(this), null, ResetPointer);
             _objectPool = new ObjectPool<ObjectPointer>(50, () => new ObjectPointer(this), null, ResetPointer);
+            _tuioInput = _tuioVersion switch
+            {
+                TuioVersion.Tuio11 => new Tuio11Input(this),
+                TuioVersion.Tuio20 => new Tuio20Input(this),
+                _ => throw new ArgumentOutOfRangeException($"{typeof(TuioVersion)} has no value of {_tuioVersion}.")
+            };
         }
 
         public void Reinit()
         {
-            Disconnect();
-            IsInitialized = false;
+            _session.Dispose();
+            _isInitialized = false;
             Init();
         }
 
-        protected abstract void Connect();
-        protected abstract void Disconnect();
+        protected override void Init()
+        {
+            if(_isInitialized) return;
+            var port = UdpPort;
+            if (_connectionType == TuioConnectionType.Websocket)
+            {
+                port = _tuioVersion switch
+                {
+                    TuioVersion.Tuio11 => 3333,
+                    TuioVersion.Tuio20 => 3343,
+                    _ => throw new ArgumentOutOfRangeException($"{typeof(TuioVersion)} has no value of {_tuioVersion}.")
+                };
+            }
+
+            _session = new TuioSession(_tuioVersion, _connectionType, IpAddress, port, false);
+            _isInitialized = true;
+        }
+        
+        public void AddMessageListener(MessageListener listener)
+        {
+            _session.AddMessageListener(listener);
+        }
+
+        public void RemoveMessageListener(string messageProfile)
+        {
+            _session.RemoveMessageListener(messageProfile);
+        }
+        
+        public void RemoveMessageListener(MessageListener listener)
+        {
+            RemoveMessageListener(listener.MessageProfile);
+        }
 
         protected override void OnEnable()
         {
             base.OnEnable();
             ScreenWidth = Screen.width;
             ScreenHeight = Screen.height;
+            Resolution = new Vector2Int(ScreenWidth, ScreenHeight);
+            _tuioInput.AddCallbacks();
         }
 
         protected override void OnDisable()
         {
-            foreach (var touchPointer in TouchToInternalId.Values)
+            foreach (var touchPointer in _touchToInternalId.Values)
             {
                 CancelPointer(touchPointer);
             }
 
-            foreach (var objectPointer in ObjectToInternalId.Values)
+            foreach (var objectPointer in _objectToInternalId.Values)
             {
                 CancelPointer(objectPointer);
             }
             
-            TouchToInternalId.Clear();
-            ObjectToInternalId.Clear();
-            Disconnect();
+            _touchToInternalId.Clear();
+            _objectToInternalId.Clear();
+            _tuioInput.RemoveCallbacks();
             base.OnDisable();
+        }
+
+        public override bool UpdateInput()
+        {
+            _session.ProcessMessages();
+            return true;
         }
 
         public override bool CancelPointer(Pointer pointer, bool shouldReturn)
@@ -101,7 +158,7 @@ namespace TouchScript.InputSources
                 if (pointer.Type == Pointer.PointerType.Touch)
                 {
                     uint? touchId = null;
-                    foreach (var kvp in TouchToInternalId)
+                    foreach (var kvp in _touchToInternalId)
                     {
                         if(kvp.Value.Id != pointer.Id) continue;
                         touchId = kvp.Key;
@@ -112,18 +169,18 @@ namespace TouchScript.InputSources
                     CancelPointer(pointer);
                     if (shouldReturn)
                     {
-                        TouchToInternalId[touchId.Value] = ReturnTouch(pointer as TouchPointer);
+                        _touchToInternalId[touchId.Value] = ReturnTouch(pointer as TouchPointer);
                     }
                     else
                     {
-                        TouchToInternalId.Remove(touchId.Value);
+                        _touchToInternalId.Remove(touchId.Value);
                     }
 
                     return true;
                 }
 
                 uint? objectId = null;
-                foreach (var kvp in ObjectToInternalId)
+                foreach (var kvp in _objectToInternalId)
                 {
                     if (kvp.Value.Id != pointer.Id) continue;
                     objectId = kvp.Key;
@@ -134,11 +191,11 @@ namespace TouchScript.InputSources
                 CancelPointer(pointer);
                 if (shouldReturn)
                 {
-                    ObjectToInternalId[objectId.Value] = ReturnObject(pointer as ObjectPointer);
+                    _objectToInternalId[objectId.Value] = ReturnObject(pointer as ObjectPointer);
                 }
                 else
                 {
-                    ObjectToInternalId.Remove(objectId.Value);
+                    _objectToInternalId.Remove(objectId.Value);
                 }
 
                 return true;
@@ -158,15 +215,44 @@ namespace TouchScript.InputSources
             }
         }
         
-        protected ObjectPointer AddObject(Vector2 position)
+        public void AddObject(uint sessionId, int symbolId, Vector2 normalizedPosition, float angle)
         {
             var pointer = _objectPool.Get();
-            pointer.Position = RemapCoordinates(position);
+            var screenPosition = NormalizedToScreenPosition(normalizedPosition);
+            pointer.Position = RemapCoordinates(screenPosition);
             pointer.Buttons |= Pointer.PointerButtonState.FirstButtonDown |
                                Pointer.PointerButtonState.FirstButtonPressed;
+            pointer.ObjectId = symbolId;
+            pointer.Angle = angle;
             AddPointer(pointer);
             PressPointer(pointer);
-            return pointer;
+            _objectToInternalId.Add(sessionId, pointer);
+        }
+
+        public void UpdateObject(uint sessionId, Vector2 normalizedPosition, float angle)
+        {
+            if (!_objectToInternalId.TryGetValue(sessionId, out var objectPointer)) return;
+            var screenPosition = NormalizedToScreenPosition(normalizedPosition);
+            objectPointer.Position = RemapCoordinates(screenPosition);
+            objectPointer.Angle = angle;
+            UpdatePointer(objectPointer);
+        }
+
+        public void RemoveObject(uint sessionId)
+        {
+            if (!_objectToInternalId.Remove(sessionId, out var objectPointer)) return;
+            ReleasePointer(objectPointer);
+            RemovePointer(objectPointer);
+        }
+
+        private Vector2 NormalizedToScreenPosition(Vector2 normalizedPosition)
+        {
+            var screenPosition = new Vector2
+            {
+                x = normalizedPosition.x * ScreenWidth,
+                y = (1f - normalizedPosition.y) * ScreenHeight,
+            };
+            return screenPosition;
         }
 
         private ObjectPointer ReturnObject(ObjectPointer pointer)
@@ -181,15 +267,31 @@ namespace TouchScript.InputSources
             return newPointer;
         }
         
-        protected TouchPointer AddTouch(Vector2 position)
+        public void AddTouch(uint id, Vector2 normalizedPosition)
         {
             var pointer = _touchPool.Get();
-            pointer.Position = RemapCoordinates(position);
+            var screenPosition = NormalizedToScreenPosition(normalizedPosition);
+            pointer.Position = RemapCoordinates(screenPosition);
             pointer.Buttons |= Pointer.PointerButtonState.FirstButtonDown |
                                Pointer.PointerButtonState.FirstButtonPressed;
             AddPointer(pointer);
             PressPointer(pointer);
-            return pointer;
+            _touchToInternalId.Add(id, pointer);
+        }
+
+        public void UpdateTouch(uint id, Vector2 normalizedPosition)
+        {
+            if (!_touchToInternalId.TryGetValue(id, out var touchPointer)) return;
+            var screenPosition = NormalizedToScreenPosition(normalizedPosition);
+            touchPointer.Position = RemapCoordinates(screenPosition);
+            UpdatePointer(touchPointer);
+        }
+
+        public void RemoveTouch(uint id)
+        {
+            if (!_touchToInternalId.Remove(id, out var touchPointer)) return;
+            ReleasePointer(touchPointer);
+            RemovePointer(touchPointer);
         }
 
         private TouchPointer ReturnTouch(TouchPointer pointer)
