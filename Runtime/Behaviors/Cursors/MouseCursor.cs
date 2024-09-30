@@ -14,7 +14,7 @@ namespace TouchScript.Behaviors.Cursors
     /// Cursor for mouse pointers.
     /// </summary>
     [HelpURL("http://touchscript.github.io/docs/html/T_TouchScript_Behaviors_Cursors_MouseCursor.htm")]
-    public class MouseCursor : TextPointerCursor<MousePointer>
+    public class MouseCursor : PointerCursor
     {
         #region Public properties
 
@@ -27,11 +27,6 @@ namespace TouchScript.Behaviors.Cursors
         /// Pressed cursor sub object.
         /// </summary>
         public TextureSwitch PressedCursor;
-
-        /// <summary>
-        /// Should the value of <see cref="Pointer.Buttons"/> be shown on the cursor.
-        /// </summary>
-        public bool ShowButtons = false;
 
         #endregion
 
@@ -55,35 +50,6 @@ namespace TouchScript.Behaviors.Cursors
             }
 
             base.UpdateOnce(pointer);
-        }
-
-        /// <inheritdoc />
-        protected override void GenerateText(MousePointer pointer, StringBuilder str)
-        {
-            base.GenerateText(pointer, str);
-
-            if (ShowButtons)
-            {
-                if (str.Length > 0) str.Append("\n");
-                str.Append("Buttons: ");
-                PointerUtils.PressedButtonsToString(pointer.Buttons, str);
-            }
-        }
-
-        /// <inheritdoc />
-        protected override bool TextIsVisible()
-        {
-            return base.TextIsVisible() || ShowButtons;
-        }
-
-        /// <inheritdoc />
-        protected override uint GetHash(MousePointer pointer)
-        {
-            var hash = base.GetHash(pointer);
-
-            if (ShowButtons) hash += (uint) (pointer.Buttons & Pointer.PointerButtonState.AnyButtonPressed);
-
-            return hash;
         }
 
         #endregion

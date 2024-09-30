@@ -11,7 +11,8 @@ namespace TouchScript.Behaviors.Cursors
     /// Visual cursor implementation used by TouchScript.
     /// </summary>
     [HelpURL("http://touchscript.github.io/docs/html/T_TouchScript_Behaviors_Cursors_PointerCursor.htm")]
-    public class PointerCursor<T> : MonoBehaviour where T: IPointer
+    [RequireComponent(typeof(CanvasGroup))]
+    public abstract class PointerCursor : MonoBehaviour
     {
         #region Consts
 
