@@ -61,6 +61,30 @@ namespace TouchScript.InputSources
             }
         }
         
+        public int Port
+        {
+            get
+            {
+                if (_connectionType == TuioConnectionType.Websocket)
+                {
+                    return _tuioVersion switch
+                    {
+                        TuioVersion.Tuio11 => 3333,
+                        TuioVersion.Tuio20 => 3343,
+                        _ => throw new ArgumentOutOfRangeException($"{typeof(TuioVersion)} has no value of {_tuioVersion}.")
+                    };
+                }
+                else if(_connectionType == TuioConnectionType.UDP)
+                {
+                    return _udpPort;
+                }
+                else 
+                {
+                    throw new ArgumentOutOfRangeException($"{typeof(TuioConnectionType)} has no value of {_connectionType}.");
+                }
+            }
+        }
+
         public ITuioDispatcher TuioDispatcher
         {
             get
@@ -96,18 +120,7 @@ namespace TouchScript.InputSources
         protected override void Init()
         {
             if(_isInitialized) return;
-            var port = UdpPort;
-            if (_connectionType == TuioConnectionType.Websocket)
-            {
-                port = _tuioVersion switch
-                {
-                    TuioVersion.Tuio11 => 3333,
-                    TuioVersion.Tuio20 => 3343,
-                    _ => throw new ArgumentOutOfRangeException($"{typeof(TuioVersion)} has no value of {_tuioVersion}.")
-                };
-            }
-
-            _session = new TuioSession(_tuioVersion, _connectionType, IpAddress, port, false);
+            _session = new TuioSession(_tuioVersion, _connectionType, IpAddress, Port, false);
             _isInitialized = true;
         }
         
