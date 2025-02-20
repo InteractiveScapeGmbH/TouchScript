@@ -5,7 +5,6 @@ using TouchScript.Pointers;
 using TouchScript.Utils;
 using TuioNet.Common;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace TouchScript.InputSources
 {
@@ -29,6 +28,15 @@ namespace TouchScript.InputSources
 
         private ITuioInput _tuioInput;
 
+        public TuioConnectionType ConnectionType
+        {
+            get => _connectionType;
+            set
+            {
+                _connectionType = value;
+            }
+        }
+
         public Vector2Int Resolution { get; private set; }
 
         public int UdpPort
@@ -37,7 +45,7 @@ namespace TouchScript.InputSources
             set
             {
                 if(value < 0) return;
-                UdpPort = value;
+                _udpPort = value;
             }
         }
 
@@ -53,6 +61,24 @@ namespace TouchScript.InputSources
             }
         }
         
+        public int Port
+        {
+            get
+            {
+                return _connectionType switch
+                {
+                    TuioConnectionType.Websocket => _tuioVersion switch
+                    {
+                        TuioVersion.Tuio11 => 3333,
+                        TuioVersion.Tuio20 => 3343,
+                        _ => throw new ArgumentOutOfRangeException($"{typeof(TuioVersion)} has no value of {_tuioVersion}.")
+                    },
+                    TuioConnectionType.UDP => _udpPort,
+                    _ => throw new ArgumentOutOfRangeException($"{typeof(TuioConnectionType)} has no value of {_connectionType}."),
+                };
+            }
+        }
+
         public ITuioDispatcher TuioDispatcher
         {
             get
@@ -88,18 +114,7 @@ namespace TouchScript.InputSources
         protected override void Init()
         {
             if(_isInitialized) return;
-            var port = UdpPort;
-            if (_connectionType == TuioConnectionType.Websocket)
-            {
-                port = _tuioVersion switch
-                {
-                    TuioVersion.Tuio11 => 3333,
-                    TuioVersion.Tuio20 => 3343,
-                    _ => throw new ArgumentOutOfRangeException($"{typeof(TuioVersion)} has no value of {_tuioVersion}.")
-                };
-            }
-
-            _session = new TuioSession(_tuioVersion, _connectionType, IpAddress, port, false);
+            _session = new TuioSession(_tuioVersion, _connectionType, IpAddress, Port, false);
             _isInitialized = true;
         }
         
