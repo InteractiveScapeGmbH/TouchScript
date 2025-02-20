@@ -28,6 +28,15 @@ namespace TouchScript.InputSources
 
         private ITuioInput _tuioInput;
 
+        public TuioConnectionType ConnectionType
+        {
+            get => _connectionType;
+            set
+            {
+                _connectionType = value;
+            }
+        }
+
         public Vector2Int Resolution { get; private set; }
 
         public int UdpPort
