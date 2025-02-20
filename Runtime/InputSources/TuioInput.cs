@@ -45,7 +45,7 @@ namespace TouchScript.InputSources
             set
             {
                 if(value < 0) return;
-                UdpPort = value;
+                _udpPort = value;
             }
         }
 
