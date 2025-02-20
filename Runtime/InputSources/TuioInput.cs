@@ -65,23 +65,17 @@ namespace TouchScript.InputSources
         {
             get
             {
-                if (_connectionType == TuioConnectionType.Websocket)
+                return _connectionType switch
                 {
-                    return _tuioVersion switch
+                    TuioConnectionType.Websocket => _tuioVersion switch
                     {
                         TuioVersion.Tuio11 => 3333,
                         TuioVersion.Tuio20 => 3343,
                         _ => throw new ArgumentOutOfRangeException($"{typeof(TuioVersion)} has no value of {_tuioVersion}.")
-                    };
-                }
-                else if(_connectionType == TuioConnectionType.UDP)
-                {
-                    return _udpPort;
-                }
-                else 
-                {
-                    throw new ArgumentOutOfRangeException($"{typeof(TuioConnectionType)} has no value of {_connectionType}.");
-                }
+                    },
+                    TuioConnectionType.UDP => _udpPort,
+                    _ => throw new ArgumentOutOfRangeException($"{typeof(TuioConnectionType)} has no value of {_connectionType}."),
+                };
             }
         }
 
