@@ -5,7 +5,6 @@ using TouchScript.Pointers;
 using TouchScript.Utils;
 using TuioNet.Common;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace TouchScript.InputSources
 {
