@@ -69,7 +69,7 @@ namespace TouchScript.InputSources
                 };
                 var objectPointer = AddObject(screenPosition);
                 UpdateObjectProperties(objectPointer, tuio11Object);
-                ObjectToInternalId.Add(tuio11Object.SymbolId, objectPointer);
+                ObjectToInternalId.Add(tuio11Object.SessionId, objectPointer);
             }
         }
 
@@ -77,7 +77,7 @@ namespace TouchScript.InputSources
         {
             lock (this)
             {
-                if (!ObjectToInternalId.TryGetValue(tuio11Object.SymbolId, out var objectPointer)) return;
+                if (!ObjectToInternalId.TryGetValue(tuio11Object.SessionId, out var objectPointer)) return;
                 var screenPosition = new Vector2
                 {
                     x = tuio11Object.Position.X * ScreenWidth,
@@ -93,8 +93,8 @@ namespace TouchScript.InputSources
         {
             lock (this)
             {
-                if (!ObjectToInternalId.TryGetValue(tuio11Object.SymbolId, out var objectPointer)) return;
-                ObjectToInternalId.Remove(tuio11Object.SymbolId);
+                if (!ObjectToInternalId.TryGetValue(tuio11Object.SessionId, out var objectPointer)) return;
+                ObjectToInternalId.Remove(tuio11Object.SessionId);
                 ReleasePointer(objectPointer);
                 RemovePointer(objectPointer);
             }
