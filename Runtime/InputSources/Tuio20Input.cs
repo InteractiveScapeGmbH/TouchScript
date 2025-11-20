@@ -91,6 +91,7 @@ namespace TouchScript.InputSources
                         y = (1f - tuioPointer.Position.Y) * ScreenHeight
                     };
                     touchPointer.Position = RemapCoordinates(screenPosition);
+                    UpdatePointerProperties(touchPointer, tuioPointer);
                     UpdatePointer(touchPointer);
                 }
 
@@ -140,6 +141,11 @@ namespace TouchScript.InputSources
         {
             pointer.ObjectId = (int)token.ComponentId;
             pointer.Angle = token.Angle;
+        }
+
+        private void UpdatePointerProperties(TouchPointer pointer, Tuio20Pointer tuioData)
+        {
+            pointer.Rotation = tuioData.Angle;
         }
     }
 }
