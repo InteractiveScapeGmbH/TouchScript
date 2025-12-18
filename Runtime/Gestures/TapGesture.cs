@@ -113,6 +113,19 @@ namespace TouchScript.Gestures
             set { combinePointersInterval = value; }
         }
 
+        public Vector2 PointerDirection
+        {
+            get => direction.Value;
+        }
+
+        public float PointerRotation
+        {
+            get
+            {
+                return direction.ToAngle();
+            }
+        }
+
         #endregion
 
         #region Private variables
@@ -146,6 +159,7 @@ namespace TouchScript.Gestures
         private TimedSequence<Pointer> pointerSequence = new TimedSequence<Pointer>();
 
         private CustomSampler gestureSampler;
+        private SmoothedVector2 direction = new(10);
 
         #endregion
 
@@ -207,29 +221,35 @@ namespace TouchScript.Gestures
 
             if (NumPointers == pointers.Count)
             {
+                var pointer = pointers[0];
+
                 // the first ever pointer
                 if (tapsDone == 0)
                 {
-                    startPosition = pointers[0].Position;
+                    startPosition = pointer.Position;
                     if (timeLimit < float.PositiveInfinity) StartCoroutine("wait");
+                    direction.Reset();
+                    direction.Update(pointer.Rotation);
                 }
                 else if (tapsDone >= numberOfTapsRequired) // Might be delayed and retapped while waiting
                 {
                     reset();
-                    startPosition = pointers[0].Position;
+                    startPosition = pointer.Position;
                     if (timeLimit < float.PositiveInfinity) StartCoroutine("wait");
+                    direction.Update(pointer.Rotation);
                 }
                 else
                 {
                     if (distanceLimit < float.PositiveInfinity)
                     {
-                        if ((pointers[0].Position - startPosition).sqrMagnitude > distanceLimitInPixelsSquared)
+                        if ((pointer.Position - startPosition).sqrMagnitude > distanceLimitInPixelsSquared)
                         {
                             setState(GestureState.Failed);
                             gestureSampler.End();
                             return;
                         }
                     }
+                    direction.Update(pointer.Rotation);
                 }
             }
             if (pointersNumState == PointersNumState.PassedMinThreshold)
