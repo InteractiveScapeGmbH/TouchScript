@@ -37,6 +37,12 @@ namespace TouchScript.Pointers
         /// <inheritdoc />
         public Vector2 PreviousPosition { get; private set; }
 
+        /// <inheritdoc />
+        public float Rotation { get; set; }
+
+        /// <inheritdoc />
+        public float PreviousRotation { get; private set; }
+
         #endregion
 
         #region Constructors
@@ -48,6 +54,17 @@ namespace TouchScript.Pointers
         public FakePointer(Vector2 position) : this()
         {
             Position = position;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FakePointer"/> class.
+        /// </summary>
+        /// <param name="position">The position.</param>
+        /// <param name="rotation">The rotation in radians.</param>
+        public FakePointer(Vector2 position, float rotation) : this()
+        {
+            Position = PreviousPosition = position;
+            Rotation = PreviousRotation = rotation;
         }
 
         /// <summary>

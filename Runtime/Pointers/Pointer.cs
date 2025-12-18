@@ -213,6 +213,15 @@ namespace TouchScript.Pointers
         /// <inheritdoc />
         public Vector2 PreviousPosition { get; private set; }
 
+        public float Rotation
+        {
+            get { return rotation; }
+            set { newRotation = value; }
+        }
+
+        /// <inheritdoc />
+        public float PreviousRotation { get; private set; }
+
         /// <inheritdoc />
         public uint Flags { get; set; }
 
@@ -237,6 +246,7 @@ namespace TouchScript.Pointers
         private LayerManagerInstance layerManager;
         private int refCount = 0;
         private Vector2 position, newPosition;
+        private float rotation, newRotation;
         private HitData pressData, overData;
         private bool overDataIsDirty = true;
 
@@ -274,6 +284,8 @@ namespace TouchScript.Pointers
             Buttons = target.Buttons;
             position = target.position;
             newPosition = target.newPosition;
+            rotation = target.rotation;
+            newRotation = target.newRotation;
             PreviousPosition = target.PreviousPosition;
         }
 
@@ -313,6 +325,8 @@ namespace TouchScript.Pointers
             BinaryUtils.ToBinaryString(Flags, builder, 8);
             builder.Append(", position: ");
             builder.Append(Position);
+            builder.Append(", rotation: ");
+            builder.Append(Rotation);
             builder.Append(")");
             return builder.ToString();
         }
@@ -340,6 +354,7 @@ namespace TouchScript.Pointers
         {
             Id = id;
             PreviousPosition = position = newPosition;
+            PreviousRotation = rotation = newRotation;
         }
 
         internal virtual void INTERNAL_Reset()
@@ -347,6 +362,7 @@ namespace TouchScript.Pointers
             Id = INVALID_POINTER;
             INTERNAL_ClearPressData();
             position = newPosition = PreviousPosition = Vector2.zero;
+            rotation = newRotation = PreviousRotation = 0;
             Flags = 0;
             Buttons = PointerButtonState.Nothing;
             overDataIsDirty = true;
@@ -362,6 +378,13 @@ namespace TouchScript.Pointers
         {
             PreviousPosition = position;
             position = newPosition;
+            INTERNAL_UpdateRotation();
+        }
+
+        internal virtual void INTERNAL_UpdateRotation()
+        {
+            PreviousRotation = rotation;
+            rotation = newRotation;
         }
 
         internal void INTERNAL_Retain()
@@ -385,6 +408,11 @@ namespace TouchScript.Pointers
         {
             pressData = default(HitData);
             refCount = 0;
+        }
+
+        internal void INTERNAL_InitRotation(float rot)
+        {
+            PreviousRotation = rotation = newRotation = rot;
         }
 
         #endregion
