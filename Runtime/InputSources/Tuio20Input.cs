@@ -14,6 +14,9 @@ namespace TouchScript.InputSources
     {
         private TuioClient _client;
         private Tuio20Processor _processor;
+
+        [SerializeField] private float _pointerOffset = 0;
+
         protected override void Init()
         {
             if (IsInitialized) return;
@@ -58,7 +61,9 @@ namespace TouchScript.InputSources
                         x = tuioPointer.Position.X * ScreenWidth,
                         y = (1f - tuioPointer.Position.Y) * ScreenHeight
                     };
-                   TouchToInternalId.Add(tuioPointer.SessionId, AddTouch(screenPosition));
+                    var touchPointer = AddTouch(screenPosition);
+                    InitPointerProperties(touchPointer, tuioPointer);
+                    TouchToInternalId.Add(tuioPointer.SessionId, touchPointer);
                 }
 
                 if (tuio20Object.ContainsNewTuioToken())
@@ -143,9 +148,25 @@ namespace TouchScript.InputSources
             pointer.Angle = token.Angle;
         }
 
+
+        private void InitPointerProperties(TouchPointer pointer, Tuio20Pointer tuioData)
+        {
+            pointer.INTERNAL_InitRotation(ShiftAngle(tuioData.Angle, _pointerOffset));
+        }
+
         private void UpdatePointerProperties(TouchPointer pointer, Tuio20Pointer tuioData)
         {
-            pointer.Rotation = tuioData.Angle;
+            pointer.Rotation = ShiftAngle(tuioData.Angle, _pointerOffset);
+        }
+
+        private static float ShiftAngle(float angle, float offset)
+        {
+            const float TWO_PI = 2 * Mathf.PI;
+            float result = angle + offset;
+            result = result % TWO_PI;
+            if (result < 0)
+                result += TWO_PI;
+            return result;
         }
     }
 }
