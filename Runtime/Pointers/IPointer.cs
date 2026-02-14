@@ -45,6 +45,16 @@ namespace TouchScript.Pointers
         Vector2 PreviousPosition { get; }
 
         /// <summary>
+        /// Rotation of the pointer in radians.
+        /// </summary>
+        float Rotation { get; set; }
+
+        /// <summary>
+        /// Previous Rotation of the pointer in radians.
+        /// </summary>
+        float PreviousRotation { get; }
+
+        /// <summary>
         /// <para>Gets or sets pointer flags: <see cref="Pointer.FLAG_ARTIFICIAL"/></para>
         /// <para>Note: setting this property doesn't immediately change its value, the value actually changes during the next TouchManager update phase.</para>
         /// </summary>

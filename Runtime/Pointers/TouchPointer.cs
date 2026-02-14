@@ -28,12 +28,6 @@ namespace TouchScript.Pointers
         #region Public properties
 
         /// <summary>
-        /// Gets or sets the touch's rotation.
-        /// </summary>
-        /// <value> Rotation in radians. </value>
-        public float Rotation { get; set; }
-
-        /// <summary>
         /// Gets or sets the touch's pressure.
         /// </summary>
         /// <value> Pressure in range [0, 1]. </value>

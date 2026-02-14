@@ -236,11 +236,19 @@ namespace TouchScript.Core
         private HashSet<int> pointersRemoved = new HashSet<int>();
         private HashSet<int> pointersCancelled = new HashSet<int>();
 
-        private static ObjectPool<List<Pointer>> pointerListPool = new ObjectPool<List<Pointer>>(2,
-            () => new List<Pointer>(10), null, (l) => l.Clear());
+        private static ObjectPool<List<Pointer>> pointerListPool = new ObjectPool<List<Pointer>>(
+            capacity: 2,
+            actionNew: () => new List<Pointer>(10),
+            actionOnGet: null,
+            actionOnRelease: (l) => l.Clear()
+        );
 
-        private static ObjectPool<List<int>> intListPool = new ObjectPool<List<int>>(3, () => new List<int>(10), null,
-            (l) => l.Clear());
+        private static ObjectPool<List<int>> intListPool = new ObjectPool<List<int>>(
+            capacity: 3,
+            actionNew: () => new List<int>(10),
+            actionOnGet: null,
+            actionOnRelease: (l) => l.Clear()
+        );
 
         private int nextPointerId = 0;
         private object pointerLock = new object();
